@@ -42,21 +42,27 @@ cv::Mat process_frame(cv::Mat input)
                 break;
             }
 
-            case BILINEAR_INTERPOLATION:
+            case BILINEAR_INTERPOLATION: // Same than INTER_LINEAL
             {
+                int x = (int)(i * (input_height / output_height));
+                int y = (int)(j * (input_width / output_width));
+
                 // Average 2x2 neighbors values
                 int r = 0, g = 0, b = 0;
-                for (int x = max(0, i - 1); x <= min(input_height - 1, i + 1); x++)
+                int count = 0;
+                for (int xn = floor(x); xn <= min((int)ceil(x), input_height - 1); xn++)
                 {
-                    for (int y = max(0, j - 1); y <= min(input_width - 1, j + 1); y++)
+                    for (int yn = floor(y); yn <= min((int)ceil(y), input_width - 1); yn++)
                     {
-                        r += input.at<cv::Vec3b>(x, y)[0] / 4;
-                        g += input.at<cv::Vec3b>(x, y)[1] / 4;
-                        b += input.at<cv::Vec3b>(x, y)[2] / 4;
+                        r += input.at<cv::Vec3b>(xn, yn)[0];
+                        g += input.at<cv::Vec3b>(xn, yn)[1];
+                        b += input.at<cv::Vec3b>(xn, yn)[2];
+
+                        count++;
                     }
                 }
 
-                output.at<cv::Vec3b>(i, j) = cv::Vec3b(r, g, b);
+                output.at<cv::Vec3b>(i, j) = cv::Vec3b(r, g, b) / count;
                 break;
             }
 
