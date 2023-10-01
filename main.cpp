@@ -2,13 +2,14 @@
 #include "opencv2/highgui.hpp"
 #include "opencv2/imgproc.hpp"
 #include <iostream>
+#include <chrono>
 #include "omp.h"
 
 #define NUM_THREADS 4
 #define DEFAULT_FILENAME "video2.mp4"
 #define DEFAULT_OUTPUT_FILENAME "output.mp4"
 #define DEFAULT_OUTPUT_WIDTH 640
-#define DEFAULT_OUTPUT_HEIGHT 480
+#define DEFAULT_OUTPUT_HEIGHT 360
 
 #define NEAREST_NEIGHBOR 0
 #define BILINEAR_INTERPOLATION 1
@@ -20,7 +21,8 @@ char *filename;
 char *output_filename;
 int input_width, output_width;
 int input_height, output_height;
-int method = BILINEAR_INTERPOLATION;
+int num_threads;
+int method;
 
 cv::Mat process_frame(cv::Mat input)
 {
@@ -80,24 +82,36 @@ cv::Mat process_frame(cv::Mat input)
 int main(int argc, char *argv[])
 {
     // Get params size
-    if (argc == 1)
-    {
-        filename = (char *)DEFAULT_FILENAME;
-        output_filename = (char *)DEFAULT_OUTPUT_FILENAME;
-        output_width = DEFAULT_OUTPUT_WIDTH;
-        output_height = DEFAULT_OUTPUT_HEIGHT;
-    }
-    else if (argc == 5)
+    if (argc >= 4)
     {
         filename = argv[1];
         output_filename = argv[2];
-        output_width = atoi(argv[3]);
-        output_height = atoi(argv[4]);
+        num_threads = atoi(argv[3]);
     }
     else
     {
-        cout << "Usage: " << argv[0] << " <input_video> <output_video> <output_width> <output_height>" << endl;
-        return 1;
+        filename = (char *)DEFAULT_FILENAME;
+        output_filename = (char *)DEFAULT_OUTPUT_FILENAME;
+        num_threads = NUM_THREADS;
+    }
+    if (argc >= 6)
+    {
+        output_width = atoi(argv[4]);
+        output_height = atoi(argv[5]);
+    }
+    else
+    {
+        output_width = DEFAULT_OUTPUT_WIDTH;
+        output_height = DEFAULT_OUTPUT_HEIGHT;
+    }
+
+    if (argc >= 7)
+    {
+        method = atoi(argv[6]);
+    }
+    else
+    {
+        method = NEAREST_NEIGHBOR;
     }
 
     cv::VideoCapture capture(filename);
@@ -132,6 +146,8 @@ int main(int argc, char *argv[])
     cv::Mat output_frames[frame_count];
 
     omp_set_num_threads(NUM_THREADS);
+
+    auto start = chrono::high_resolution_clock::now();
 #pragma omp parallel for
     for (int frame_number = 0; frame_number < frame_count; frame_number++)
     {
@@ -156,7 +172,10 @@ int main(int argc, char *argv[])
         writter << output_frames[frame_number];
     }
 
-    cout << "Done!" << endl;
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
+
+    cout << duration.count() << endl;
 
     // Release video capture and writter
     capture.release();
