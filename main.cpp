@@ -39,7 +39,6 @@ cv::Mat process_frame(cv::Mat input)
                 int x = (int)(i * (input_height / output_height));
                 int y = (int)(j * (input_width / output_width));
 
-                // cout << x << " " << y << endl;
                 output.at<cv::Vec3b>(i, j) = input.at<cv::Vec3b>(x, y);
                 break;
             }
@@ -111,7 +110,7 @@ int main(int argc, char *argv[])
     }
     else
     {
-        method = NEAREST_NEIGHBOR;
+        method = BILINEAR_INTERPOLATION;
     }
 
     cv::VideoCapture capture(filename);
@@ -143,41 +142,38 @@ int main(int argc, char *argv[])
     cv::VideoWriter writter("output.mp4", cv::VideoWriter::fourcc('a', 'v', 'c', '1'), fps, cv::Size(output_width, output_height));
 
     // We'll write output video frame by frame in parallel
-    cv::Mat output_frames[frame_count];
+    cv::Mat frames[frame_count];
+
+    cout << "Reading video frames..." << endl;
+    for (int frame_number = 0; frame_number < frame_count; frame_number++)
+    {
+        capture >> frames[frame_number];
+    }
+
+    capture.release();
 
     omp_set_num_threads(NUM_THREADS);
 
     auto start = chrono::high_resolution_clock::now();
+
 #pragma omp parallel for
     for (int frame_number = 0; frame_number < frame_count; frame_number++)
     {
-        cv::Mat frame;
-
-        // Reading a specific frame shouldn't be done in parallel since indexes are not consecutive
-#pragma omp critical
-        {
-            // Set frame position
-            capture.set(cv::CAP_PROP_POS_FRAMES, frame_number);
-
-            capture >> frame;
-        }
+        cv::Mat frame = frames[frame_number];
 
         // Here frame is processed in parallel
-        output_frames[frame_number] = process_frame(frame);
-    }
-
-    // Joining all frames into a single video
-    for (int frame_number = 0; frame_number < frame_count; frame_number++)
-    {
-        writter << output_frames[frame_number];
+        frames[frame_number] = process_frame(frame);
     }
 
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
+    cout << "Execution Time: " << duration.count() << endl;
 
-    cout << duration.count() << endl;
+    // Joining all frames into a single video
+    for (int frame_number = 0; frame_number < frame_count; frame_number++)
+    {
+        writter << frames[frame_number];
+    }
 
-    // Release video capture and writter
-    capture.release();
     writter.release();
 }
