@@ -2,4 +2,4 @@ OPENCV = -ID:/MSYS2/mingw64/include/opencv4 -LD:/MSYS2/mingw64/lib -lopencv_gapi
 
 run:
 	g++ -fopenmp main.cpp -o main $(OPENCV)
-	./main ./video3.mp4 ./output.mp4 4
+	./main ./video3.mp4 ./output.mp4 1
