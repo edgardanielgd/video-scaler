@@ -36,40 +36,42 @@ int method;
 __global__ void
 process(const unsigned char *input, unsigned char *output, int frameCount, int inp_w, int inp_h, int out_w, int out_h )
 {
+    // Process one frame per thread
     int index = blockDim.x * blockIdx.x + threadIdx.x;
     int pixels_count = out_w * out_h;
 
-    // // Process one pixel at a time in parallel when possible, otherwise process modular pixels
-    // for( int pixel_index = index; pixel_index < pixels_count; pixel_index += blockDim.x * gridDim.x ){
-    //     int src_i = pixel_index % out_w;
-    //     int src_j = pixel_index / out_w;
-        
-    //     int x = (int)(src_i * (inp_h / out_h));
-    //     int y = (int)(src_j * (inp_w / out_w));
+    // Process one pixel at a time in parallel when possible, otherwise process modular pixels
+    for (int i = 0; i < out_h; i++)
+    {
+        for (int j = 0; j < out_w; j++)
+        {
+            int x = (int)(i * (inp_h / out_h));
+            int y = (int)(i * (inp_w / out_w));
 
-    //     // Average 2x2 neighbors values
-    //     int r = 0, g = 0, b = 0;
-    //     int count = 0;
+            // Average 2x2 neighbors values
+            int r = 0, g = 0, b = 0;
+            int count = 0;
 
-    //     for (int xn = x; xn <= min(x, inp_h - 1); xn++)
-    //     {
-    //         for (int yn = y; yn <= min(y, inp_w - 1); yn++)
-    //         {
-    //             r += input[(xn * inp_w + yn) * 3];
-    //             g += input[(xn * inp_w + yn) * 3 + 1];
-    //             b += input[(xn * inp_w + yn) * 3 + 2];
+            for (int xn = x; xn <= min(x, inp_h - 1); xn++)
+            {
+                for (int yn = y; yn <= min(y, inp_w - 1); yn++)
+                {
+                    r += input[(xn * inp_w + yn) * 3];
+                    g += input[(xn * inp_w + yn) * 3 + 1];
+                    b += input[(xn * inp_w + yn) * 3 + 2];
 
-    //             count++;
-    //         }
-    //     }
+                    count++;
+                }
+            }
 
-    //     int dest_x = (int)(src_i * (inp_h / out_h));
-    //     int dest_y = (int)(src_j * (inp_w / out_w));
+            int dest_x = (int)(src_i * (inp_h / out_h));
+            int dest_y = (int)(src_j * (inp_w / out_w));
 
-    //     output[(dest_x * out_w + dest_y) * 3] = r / count;
-    //     output[(dest_x * out_w + dest_y) * 3 + 1] = g / count;
-    //     output[(dest_x * out_w + dest_y) * 3 + 2] = b / count;
-    // }
+            output[(dest_x * out_w + dest_y) * 3] = r / count;
+            output[(dest_x * out_w + dest_y) * 3 + 1] = g / count;
+            output[(dest_x * out_w + dest_y) * 3 + 2] = b / count;
+        }
+    }
 }
 
 void process_video( cv::Mat frames[],int frameCount){
@@ -86,109 +88,96 @@ void process_video( cv::Mat frames[],int frameCount){
     size_t sizeInput = numElementsInput * sizeof(unsigned char);
     size_t sizeOutput = numElementsOutput * sizeof(unsigned char);
 
-    for (int i = 0; i < frameCount; i ++ ) {
+    unsigned char *h_Output = (unsigned char *)malloc(sizeOutput * frameCount);
+    unsigned char *h_Input = (unsigned char *)malloc(sizeInput * frameCount);
 
-        cout << "Frame: " << i << endl;
-
-        cv::Mat frame = frames[i];
-
-        unsigned char *h_Output = (unsigned char *)malloc(sizeOutput);
-
-        if( h_Output == NULL ){
-            printf("Error allocating memory [HOST]\n");
-            exit(1);
-        }
-
-        unsigned char *h_Input = frame.data;
-
-        // Process frame in parallel
-        unsigned char *d_Input, *d_Output;
-
-        // Prepare input data on device
-        err = cudaMalloc((void **)&d_Input, sizeInput);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to allocate device vector A (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        err = cudaMemcpy(d_Input, h_Input, sizeInput, cudaMemcpyHostToDevice);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to copy vector A from host to device (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        // Allocate the output data on the device
-        err = cudaMalloc((void **)&d_Output, sizeOutput);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to allocate device vector B (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        // Process frame 
-        process<<<num_blocks, num_threads_per_block>>>(
-            d_Input, d_Output, frameCount,
-            input_width, input_height,
-            output_width, output_height
-        );
-
-        err = cudaGetLastError();
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to launch process kernel (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        // Copy the device result vector in device memory to the host result vector
-        err = cudaMemcpy(h_Output, d_Output, sizeOutput, cudaMemcpyDeviceToHost);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to copy vector C from device to host (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        // Free device global memory
-        err = cudaFree(d_Input);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to free device vector A (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        err = cudaFree(d_Output);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to free device vector B (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        // Free host memory
-        free(h_Output);
-
-        cv::Mat output_frame(output_height, output_width, CV_8UC3, h_Output);
-
-        output[i] = output_frame;
-
-        // Reset the device and exit
-        err = cudaDeviceReset();
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to deinitialize the device! error=%s\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
+    if( h_Input == NULL || h_Output == NULL ){
+        printf("Error allocating memory [HOST]\n");
+        exit(1);
     }
 
-    frames = output;
+    // Process frame in parallel
+    unsigned char *d_Input, *d_Output;
+
+    // Prepare input data on device
+    err = cudaMalloc((void **)&d_Input, sizeInput * frameCount);
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to allocate device vector A (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    err = cudaMemcpy(d_Input, h_Input, sizeInput * frameCount, cudaMemcpyHostToDevice);
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to copy vector A from host to device (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    // Allocate the output data on the device
+    err = cudaMalloc((void **)&d_Output, sizeOutput * frameCount);
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to allocate device vector B (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    // Process frame 
+    process<<<num_blocks, num_threads_per_block>>>(
+        d_Input, d_Output, frameCount,
+        input_width, input_height,
+        output_width, output_height
+    );
+
+    err = cudaGetLastError();
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to launch process kernel (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    // Copy the device result vector in device memory to the host result vector
+    err = cudaMemcpy(h_Output, d_Output, sizeOutput * frameCount, cudaMemcpyDeviceToHost);
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to copy vector C from device to host (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    // Free device global memory
+    err = cudaFree(d_Input);
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to free device vector A (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    err = cudaFree(d_Output);
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to free device vector B (error code %s)!\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
+
+    // Free host memory
+    free(h_Output);
+    free(h_Input);
+
+    // Reset the device and exit
+    err = cudaDeviceReset();
+
+    if (err != cudaSuccess)
+    {
+        fprintf(stderr, "Failed to deinitialize the device! error=%s\n", cudaGetErrorString(err));
+        exit(EXIT_FAILURE);
+    }
 }
 
 int main(int argc, char *argv[])

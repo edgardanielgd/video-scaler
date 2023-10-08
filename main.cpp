@@ -136,6 +136,9 @@ int main(int argc, char *argv[])
     cout << "  - Frame width: " << output_width << endl;
     cout << "  - Frame height: " << output_height << endl;
 
+    cout << "Input file: " << filename << endl;
+    cout << "Output file: " << output_filename << endl;
+
     assert(input_width >= output_width && input_height >= output_height);
 
     // Copying video frame by frame into video writter
