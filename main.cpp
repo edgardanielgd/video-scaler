@@ -126,7 +126,7 @@ int main(int argc, char *argv[])
     int frame_count = capture.get(cv::CAP_PROP_FRAME_COUNT);
     int fps = capture.get(cv::CAP_PROP_FPS);
 
-    cout << "Video metadata:" << endl;
+    cout << "Video metadata: (" << num_threads << ")" << endl;
     cout << "  - Frame width: " << input_width << endl;
     cout << "  - Frame height: " << input_height << endl;
     cout << "  - Frame count: " << frame_count << endl;
@@ -167,7 +167,7 @@ int main(int argc, char *argv[])
 
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
-    cout << "Execution Time: " << duration.count() << endl;
+    cout << "Threads: " << num_threads << " Execution Time: " << duration.count() << endl;
 
     // Joining all frames into a single video
     for (int frame_number = 0; frame_number < frame_count; frame_number++)

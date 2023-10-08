@@ -2,3 +2,6 @@
 *.exe
 *.mp4
 *.avi
+opencv-4.x
+opencv.zip
+build
