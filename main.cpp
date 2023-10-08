@@ -139,7 +139,7 @@ int main(int argc, char *argv[])
     assert(input_width >= output_width && input_height >= output_height);
 
     // Copying video frame by frame into video writter
-    cv::VideoWriter writter("output.mp4", cv::VideoWriter::fourcc('a', 'v', 'c', '1'), fps, cv::Size(output_width, output_height));
+    cv::VideoWriter writter(output_filename, cv::VideoWriter::fourcc('a', 'v', 'c', '1'), fps, cv::Size(output_width, output_height));
 
     // We'll write output video frame by frame in parallel
     cv::Mat frames[frame_count];
