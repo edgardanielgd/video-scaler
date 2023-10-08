@@ -41,7 +41,7 @@ with open( FILE_NAME, "r" ) as f:
 
     plt.xlabel( "Number of threads" )
     plt.ylabel( "Time (ms)" )
-    plt.title( "Time vs Number of threads for matrix size" )
+    plt.title( "Time vs Number of threads" )
 
     plt.figure()
 
@@ -49,7 +49,7 @@ with open( FILE_NAME, "r" ) as f:
 
     plt.xlabel( "Number of threads" )
     plt.ylabel( "Speedup" )
-    plt.title( "Speedup vs Number of threads for matrix size" )
+    plt.title( "Speedup vs Number of threads" )
 
     plt.show()
 

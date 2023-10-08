@@ -1,7 +1,5 @@
-@echo on
-for /f %%i in ('pkg-config --cflags --libs opencv4') do  (
-    echo %%i
-    set RESULT=%RESULT%
-)
-echo %RESULT%
-g++ -fopenmp main.cpp -o main %RESULT%
+make THREADS=1 >> logs.txt
+make THREADS=2 >> logs.txt
+make THREADS=4 >> logs.txt
+make THREADS=8 >> logs.txt
+make THREADS=16 >> logs.txt
