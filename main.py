@@ -1,43 +1,55 @@
+import re
 import numpy as np
 import matplotlib.pyplot as plt
 import matplotlib
 
 matplotlib.use('TkAgg')
 
-FILE_NAME = "omp_multi_matricial_test.txt"
+FILE_NAME = "logs.txt"
 
 # Indexed by matrix size
 data = {}
 
+regex = re.compile( r"Threads: (\d+) Execution Time: (\d+)" )
+
+def match_lines( reader ):
+    return [
+        line for line in reader if regex.match( line )
+    ]
+
 with open( FILE_NAME, "r" ) as f:
 
+    lines = match_lines( f )
+
+    threads = []
+    times = []
+    speedups = []
+
+    for line in lines:    
+        match = regex.match( line )
+
+        threads.append( int( match.group( 1 ) ) )
+        times.append( int( match.group( 2 ) ) )
+
+    threads = np.array( threads )
+    times = np.array( times ) / 1000
+    speedups = times[ 0 ] / times
+
+    plt.figure()
     
+    plt.plot( threads, times, "o-" )
 
-    for i, matrix_size in enumerate( data ):
+    plt.xlabel( "Number of threads" )
+    plt.ylabel( "Time (ms)" )
+    plt.title( "Time vs Number of threads for matrix size" )
 
-        plt.figure()
-        
-        plt.plot(
-            data[ matrix_size ][ "thread_numbers" ],
-            data[ matrix_size ][ "threads_times" ],
-            "o-"
-        )
+    plt.figure()
 
-        plt.xlabel( "Number of threads" )
-        plt.ylabel( "Time (ns)" )
-        plt.title( "Time vs Number of threads for matrix size {}".format( matrix_size ) )
+    plt.plot( threads, speedups, "o-" )
 
-        plt.figure()
-
-        plt.plot(
-            data[ matrix_size ][ "thread_numbers" ],
-            data[ matrix_size ][ "threads_speedups" ],
-            "o-"
-        )
-
-        plt.xlabel( "Number of threads" )
-        plt.ylabel( "Speedup" )
-        plt.title( "Speedup vs Number of threads for matrix size {}".format( matrix_size ) )
+    plt.xlabel( "Number of threads" )
+    plt.ylabel( "Speedup" )
+    plt.title( "Speedup vs Number of threads for matrix size" )
 
     plt.show()
 
