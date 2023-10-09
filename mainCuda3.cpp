@@ -1,4 +1,4 @@
-% % writefile mainCuda.cu
+% % writefile mainCuda3.cu
 
 #include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
@@ -6,6 +6,7 @@
 #include "opencv2/core/utility.hpp"
 #include <iostream>
 #include <chrono>
+#include <math.h>
 #include "omp.h"
 
 #include <stdio.h>
@@ -90,9 +91,12 @@ process(
     }
 }
 
-void process_video(cv::Mat frames[], int frameCount)
+cv::Mat *process_video(cv::Mat frames[], int frameCount)
 {
     cudaError_t err = cudaSuccess;
+
+    // Create output frames array
+    cv::Mat *output_frames = new cv::Mat[frameCount];
 
     // Total number of pixels to process in GPU
     int output_pixels_per_frame = output_width * output_height;
@@ -104,7 +108,7 @@ void process_video(cv::Mat frames[], int frameCount)
     int availableThreads = num_blocks * num_threads_per_block;
 
     // Number of iterations
-    int nIterations = framesCount / FRAMES_BATCH_SIZE;
+    int nIterations = ceil((double)frameCount / (double)FRAMES_BATCH_SIZE);
 
     for (int i = 0; i < nIterations; i++)
     {
@@ -154,7 +158,7 @@ void process_video(cv::Mat frames[], int frameCount)
             {
                 fprintf(
                     stderr,
-                    "Failed to assign input vector frames data at frame index %s (error code %s)!\n",
+                    "Failed to assign input vector frames data at frame index %d (error code %s)!\n",
                     frame_index, cudaGetErrorString(err));
                 exit(EXIT_FAILURE);
             }
@@ -171,7 +175,8 @@ void process_video(cv::Mat frames[], int frameCount)
 
         // Data is assigned and memory allocated, now process pixels in parallel
         process<<<num_blocks, num_threads_per_block>>>(
-            d_input_data, d_output_data, frames_to_process,
+            d_input_data, d_output_data,
+            pixels_per_thread, frames_to_process,
             input_width, input_height,
             output_width, output_height);
 
@@ -189,10 +194,12 @@ void process_video(cv::Mat frames[], int frameCount)
         {
             int frame_index = i * FRAMES_BATCH_SIZE + j;
 
+            cv::Mat output_frame(output_height, output_width, CV_8UC3);
+
             // Copy input frame to host memory
             err = cudaMemcpy(
-                frames[frame_index].data,
-                h_output_data + j * output_pixels_per_frame * 3,
+                output_frame.data,
+                d_output_data + j * output_pixels_per_frame * 3,
                 output_pixels_per_frame * 3 * sizeof(unsigned char),
                 cudaMemcpyDeviceToHost);
 
@@ -200,10 +207,12 @@ void process_video(cv::Mat frames[], int frameCount)
             {
                 fprintf(
                     stderr,
-                    "Failed to assign output vector frames data at frame index %s (error code %s)!\n",
+                    "Failed to assign output vector frames data at frame index %d (error code %s)!\n",
                     frame_index, cudaGetErrorString(err));
                 exit(EXIT_FAILURE);
             }
+
+            output_frames[frame_index] = output_frame;
         }
 
         // Free device global memory
@@ -222,16 +231,9 @@ void process_video(cv::Mat frames[], int frameCount)
             fprintf(stderr, "Failed to free device vector B (error code %s)!\n", cudaGetErrorString(err));
             exit(EXIT_FAILURE);
         }
-
-        // Reset the device and exit
-        // err = cudaDeviceReset();
-
-        // if (err != cudaSuccess)
-        // {
-        //     fprintf(stderr, "Failed to deinitialize the device! error=%s\n", cudaGetErrorString(err));
-        //     exit(EXIT_FAILURE);
-        // }
     }
+
+    return output_frames;
 }
 
 using namespace std;
@@ -306,13 +308,10 @@ int main(int argc, char *argv[])
 
     capture.release();
 
+    cout << "Processing video..." << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    cout << "Processing video..." << endl;
-
-    process_video(frames, frame_count);
-
-    cout << "Done" << endl;
+    cv::Mat *outputs = process_video(frames, frame_count);
 
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
@@ -323,12 +322,14 @@ int main(int argc, char *argv[])
     cout << "Writing video..." << endl;
     for (int frame_number = 0; frame_number < frame_count; frame_number++)
     {
-        writter << frames[frame_number];
+        writter << outputs[frame_number];
     }
-    cout << "Done" << endl;
 
     writter.release();
 
     printf("Done\n");
+
+    // Freeing memory
+    delete[] outputs;
     return 0;
 }

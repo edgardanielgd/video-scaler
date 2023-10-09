@@ -1,0 +1,420 @@
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Video metadata: (10)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 4 Threads: 10 Execution Time: 3893717951
+Writing video...
+Done
+
+
+
+Video metadata: (10)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 8 Threads: 10 Execution Time: 3026232875
+Writing video...
+Done
+
+
+
+Video metadata: (10)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 16 Threads: 10 Execution Time: 2585076206
+Writing video...
+Done
+
+
+
+Video metadata: (10)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 32 Threads: 10 Execution Time: 2488026084
+Writing video...
+Done
+
+
+
+Video metadata: (10)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 64 Threads: 10 Execution Time: 2327459826
+Writing video...
+Done
+
+
+
+Video metadata: (20)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 4 Threads: 20 Execution Time: 3101410368
+Writing video...
+Done
+
+
+
+Video metadata: (20)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 8 Threads: 20 Execution Time: 2784717384
+Writing video...
+Done
+
+
+
+Video metadata: (20)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 16 Threads: 20 Execution Time: 2400265611
+Writing video...
+Done
+
+
+
+Video metadata: (20)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 32 Threads: 20 Execution Time: 2360460319
+Writing video...
+Done
+
+
+
+Video metadata: (20)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 64 Threads: 20 Execution Time: 2450129464
+Writing video...
+Done
+
+
+
+Video metadata: (30)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 4 Threads: 30 Execution Time: 2863994294
+Writing video...
+Done
+
+
+
+Video metadata: (30)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 8 Threads: 30 Execution Time: 2549060885
+Writing video...
+Done
+
+
+
+Video metadata: (30)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 16 Threads: 30 Execution Time: 2474104326
+Writing video...
+Done
+
+
+
+Video metadata: (30)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 32 Threads: 30 Execution Time: 2340943740
+Writing video...
+Done
+
+
+
+Video metadata: (30)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 64 Threads: 30 Execution Time: 2279150326
+Writing video...
+Done
+
+
+
+Video metadata: (40)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 4 Threads: 40 Execution Time: 2754563738
+Writing video...
+Done
+
+
+
+Video metadata: (40)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 8 Threads: 40 Execution Time: 2468924558
+Writing video...
+Done
+
+
+
+Video metadata: (40)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 16 Threads: 40 Execution Time: 2372189160
+Writing video...
+Done
+
+
+
+Video metadata: (40)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 32 Threads: 40 Execution Time: 2341027346
+Writing video...
+Done
+
+
+
+Video metadata: (40)
+  - Frame width: 1920
+  - Frame height: 1080
+  - Frame count: 932
+  - FPS: 25
+Output video metadata:
+  - Frame width: 640
+  - Frame height: 360
+Input file: video3.mp4
+Output file: output7.mp4
+Reading video frames...
+Processing video...
+Blocks: 64 Threads: 40 Execution Time: 2286129504
+Writing video...
+Done
+
+
+

@@ -315,7 +315,7 @@ int main(int argc, char *argv[])
 
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
-    cout << "Blocks: " << num_blocks << "Threads: " << num_threads_per_block << " Execution Time: " << duration.count() << endl;
+    cout << "Blocks: " << num_blocks << " Threads: " << num_threads_per_block << " Execution Time: " << duration.count() << endl;
 
     // Joining all frames into a single video
 
