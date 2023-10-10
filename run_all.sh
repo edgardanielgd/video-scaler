@@ -21,7 +21,7 @@ for i in 10 20 30 40
 do
     for j in 4 8 16 32 64
     do
-        echo "Running for BlockSize: $i, GridSize: $j"
+        echo "Running for BlockSize: $j, GridSize: $i"
         ./main_cuda $1 $2 $j $i >> $4
         echo "\n\n" >> $4
     done
