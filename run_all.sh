@@ -22,7 +22,7 @@ do
     for j in 4 8 16 32 64
     do
         echo "Running for BlockSize: $i, GridSize: $j"
-        ./main_cuda $1 $2 $i $j >> $4
+        ./main_cuda $1 $2 $j $i >> $4
         echo "\n\n" >> $4
     done
 done

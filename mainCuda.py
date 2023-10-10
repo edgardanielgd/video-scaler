@@ -7,9 +7,6 @@ matplotlib.use('TkAgg')
 
 FILE_NAME = "logsCuda.txt"
 
-# Cannont be read from file (CUDA is not thread 1 lol)
-SEQUENTIAL_TIME = 18119910100
-
 # Indexed by matrix size
 data = {}
 
@@ -24,35 +21,53 @@ with open( FILE_NAME, "r" ) as f:
 
     lines = match_lines( f )
 
-    threads = []
-    times = []
-    speedups = []
+    blocks = {}
+    blocks_speedups = {}
 
     for line in lines:    
         match = regex.match( line )
 
-        threads.append( int( match.group( 1 ) ) )
-        times.append( int( match.group( 2 ) ) )
+        nBlocks = int( match.group( 1 ) )
+        nThreads = int( match.group( 2 ) )
+        time = int( match.group( 3 ) )
 
-    threads = np.array( threads )
-    times = np.array( times ) / 1000
-    speedups = times[ 0 ] / times
+        if nBlocks not in blocks:
+            blocks[ nBlocks ] = {}
 
-    plt.figure()
+        blocks[ nBlocks ][ nThreads ] = time
+        
+    sequential_time = blocks[ 1 ][ 1 ]
+
+    for nBlocks in blocks:
+        blocks_speedups[ nBlocks ] = {}
+        for nThreads in blocks[ nBlocks ]:
+            blocks_speedups[ nBlocks ][ nThreads ] = sequential_time / blocks[ nBlocks ][ nThreads ]
+
+    for nBlocks in blocks:
+
+        threads = []
+        times = []
+        speedups = []
+
+        for nThreads in blocks[ nBlocks ]:
+            threads.append( nThreads )
+            times.append( blocks[ nBlocks ][ nThreads ] )
+            speedups.append( blocks_speedups[ nBlocks ][ nThreads ] )
+
+        plt.figure()
+
+        plt.plot( threads, times, "o-" )
+        plt.xlabel( f"Number of threads per block" )
+        plt.ylabel( f"Time (us)" )
+        plt.title( f"Time vs number of threads per block. Grid size: {nBlocks}" )
+
+        plt.figure()
+        
+        plt.plot( threads, speedups, "o-" )
+        plt.xlabel( f"Number of threads per block" )
+        plt.ylabel( f"Speedup" )
+        plt.title( f"Speedup vs number of threads per block. Grid size: {nBlocks}" )
     
-    plt.plot( threads, times, "o-" )
-
-    plt.xlabel( "Number of threads" )
-    plt.ylabel( "Time (ms)" )
-    plt.title( "Time vs Number of threads" )
-
-    plt.figure()
-
-    plt.plot( threads, speedups, "o-" )
-
-    plt.xlabel( "Number of threads" )
-    plt.ylabel( "Speedup" )
-    plt.title( "Speedup vs Number of threads" )
 
     plt.show()
 

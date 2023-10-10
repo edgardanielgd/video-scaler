@@ -1,4 +1,4 @@
-%%writefile mainCuda.cu
+%%writefile mainCuda3.cu
 
 #include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
@@ -6,6 +6,7 @@
 #include "opencv2/core/utility.hpp"
 #include <iostream>
 #include <chrono>
+#include <math.h>
 #include "omp.h"
 
 #include <stdio.h>
@@ -22,9 +23,8 @@
 #define BILINEAR_INTERPOLATION 1
 #define BICUBIC_INTERPOLATION 2
 
-#define CUDA_FRAME_BATCH_SIZE
-
-using namespace std;
+// Number of frames to be passed to GPU on step
+#define FRAMES_BATCH_SIZE 100
 
 char *filename;
 char *output_filename;
@@ -34,108 +34,151 @@ int num_threads_per_block, num_blocks;
 int method;
 
 __global__ void
-process(const unsigned char *input, unsigned char *output, int frameCount, int inp_w, int inp_h, int out_w, int out_h )
+process(
+    const unsigned char *input_data, unsigned char *output_data, int pixels_per_thread,
+    int frame_count, int inp_w, int inp_h, int out_w, int out_h)
 {
+    // Process one frame per thread
     int index = blockDim.x * blockIdx.x + threadIdx.x;
-    int pixels_count = out_w * out_h;
 
-    // // Process one pixel at a time in parallel when possible, otherwise process modular pixels
-    // for( int pixel_index = index; pixel_index < pixels_count; pixel_index += blockDim.x * gridDim.x ){
-    //     int src_i = pixel_index % out_w;
-    //     int src_j = pixel_index / out_w;
-        
-    //     int x = (int)(src_i * (inp_h / out_h));
-    //     int y = (int)(src_j * (inp_w / out_w));
+    for (int pixel_index = index * pixels_per_thread; pixel_index < (index + 1) * pixels_per_thread; pixel_index++)
+    {
+        if (pixel_index >= out_w * out_h * frame_count)
+        {
+            return;
+        }
 
-    //     // Average 2x2 neighbors values
-    //     int r = 0, g = 0, b = 0;
-    //     int count = 0;
+        // Calculate pixel coordinates
+        int output_frame_index = pixel_index / (out_w * out_h);
+        int output_pixel_index_in_frame = pixel_index % (out_w * out_h);
 
-    //     for (int xn = x; xn <= min(x, inp_h - 1); xn++)
-    //     {
-    //         for (int yn = y; yn <= min(y, inp_w - 1); yn++)
-    //         {
-    //             r += input[(xn * inp_w + yn) * 3];
-    //             g += input[(xn * inp_w + yn) * 3 + 1];
-    //             b += input[(xn * inp_w + yn) * 3 + 2];
+        int output_pixel_x = output_pixel_index_in_frame / out_w;
+        int output_pixel_y = output_pixel_index_in_frame % out_w;
 
-    //             count++;
-    //         }
-    //     }
+        // Perform actual transformation
+        int estimated_input_pixel_x = (int)(output_pixel_x * (inp_h / out_h));
+        int estimated_input_pixel_y = (int)(output_pixel_y * (inp_w / out_w));
 
-    //     int dest_x = (int)(src_i * (inp_h / out_h));
-    //     int dest_y = (int)(src_j * (inp_w / out_w));
+        // Average 2x2 neighbors values
+        int r = 0, g = 0, b = 0;
+        int count = 0;
 
-    //     output[(dest_x * out_w + dest_y) * 3] = r / count;
-    //     output[(dest_x * out_w + dest_y) * 3 + 1] = g / count;
-    //     output[(dest_x * out_w + dest_y) * 3 + 2] = b / count;
-    // }
+        int xn_limit = estimated_input_pixel_x < inp_h - 1 ? estimated_input_pixel_x : inp_h - 1;
+        int yn_limit = estimated_input_pixel_y < inp_w - 1 ? estimated_input_pixel_y : inp_w - 1;
+
+        for (int xn = estimated_input_pixel_x; xn <= xn_limit; xn++)
+        {
+            for (int yn = estimated_input_pixel_y; yn <= yn_limit; yn++)
+            {
+                int input_data_offset = output_frame_index * inp_w * inp_h * 3 + xn * inp_w * 3 + yn * 3;
+                r += input_data[input_data_offset];
+                g += input_data[input_data_offset + 1];
+                b += input_data[input_data_offset + 2];
+
+                count++;
+            }
+        }
+
+        r /= count;
+        g /= count;
+        b /= count;
+
+        // Write result to output array
+        int output_data_offset = output_frame_index * out_w * out_h * 3 + output_pixel_x * out_w * 3 + output_pixel_y * 3;
+        output_data[output_data_offset] = r;
+        output_data[output_data_offset + 1] = g;
+        output_data[output_data_offset + 2] = b;
+    }
 }
 
-void process_video( cv::Mat frames[],int frameCount){
-
+cv::Mat *process_video(cv::Mat frames[], int frameCount)
+{
     cudaError_t err = cudaSuccess;
 
-    // Process one frame at a time in parallel
-    cv::Mat output[frameCount];
+    // Create output frames array
+    cv::Mat *output_frames = new cv::Mat[frameCount];
 
-    // Allocate Unified Memory – accessible from CPU or GPU
-    int numElementsOutput = output_width * output_height * 3;
-    int numElementsInput = input_width * input_height * 3;
+    // Total number of pixels to process in GPU
+    int output_pixels_per_frame = output_width * output_height;
 
-    size_t sizeInput = numElementsInput * sizeof(unsigned char);
-    size_t sizeOutput = numElementsOutput * sizeof(unsigned char);
+    // Calculate input frames size
+    int input_pixels_per_frame = input_width * input_height;
 
-    for (int i = 0; i < frameCount; i ++ ) {
+    // Define number of pixels to process per thread
+    int availableThreads = num_blocks * num_threads_per_block;
 
-        cout << "Frame: " << i << endl;
+    // Number of iterations
+    int nIterations = ceil((double)frameCount / (double)FRAMES_BATCH_SIZE);
 
-        cv::Mat frame = frames[i];
-
-        unsigned char *h_Output = (unsigned char *)malloc(sizeOutput);
-
-        if( h_Output == NULL ){
-            printf("Error allocating memory [HOST]\n");
-            exit(1);
+    for (int i = 0; i < nIterations; i++)
+    {
+        // Calculate number of frames to process in this batch (last batch may be smaller)
+        int frames_to_process = FRAMES_BATCH_SIZE;
+        if (i == nIterations - 1)
+        {
+            frames_to_process = frameCount - i * FRAMES_BATCH_SIZE;
         }
 
-        unsigned char *h_Input = frame.data;
+        // Calculate number of pixels to process in this batch
+        int output_pixels_to_process = frames_to_process * output_pixels_per_frame;
+        int input_pixels_to_process = frames_to_process * input_pixels_per_frame;
 
-        // Process frame in parallel
-        unsigned char *d_Input, *d_Output;
+        // Calculate number of pixels per thread
+        int pixels_per_thread = output_pixels_to_process / availableThreads;
 
-        // Prepare input data on device
-        err = cudaMalloc((void **)&d_Input, sizeInput);
+        // Allocate host memory output frames array
+        // Recall that each pixel has 3 channels (RGB)
+        size_t input_data_size = input_pixels_to_process * 3 * sizeof(unsigned char);
+        size_t output_data_size = output_pixels_to_process * 3 * sizeof(unsigned char);
+
+        unsigned char *d_input_data, *d_output_data;
+
+        // Allocate device memory for input and output frames arrays
+        err = cudaMalloc((void **)&d_input_data, input_data_size);
 
         if (err != cudaSuccess)
         {
-            fprintf(stderr, "Failed to allocate device vector A (error code %s)!\n", cudaGetErrorString(err));
+            fprintf(stderr, "Failed to allocate device input vector (error code %s)!\n", cudaGetErrorString(err));
             exit(EXIT_FAILURE);
         }
 
-        err = cudaMemcpy(d_Input, h_Input, sizeInput, cudaMemcpyHostToDevice);
+        // Assign input data to host memory
+        for (int j = 0; j < frames_to_process; j++)
+        {
+            int frame_index = i * FRAMES_BATCH_SIZE + j;
+
+            // Copy input frame to host memory
+            err = cudaMemcpy(
+                d_input_data + j * input_pixels_per_frame * 3,
+                frames[frame_index].data,
+                input_pixels_per_frame * 3 * sizeof(unsigned char),
+                cudaMemcpyHostToDevice);
+
+            if (err != cudaSuccess)
+            {
+                fprintf(
+                    stderr,
+                    "Failed to assign input vector frames data at frame index %d (error code %s)!\n",
+                    frame_index, cudaGetErrorString(err));
+                exit(EXIT_FAILURE);
+            }
+        }
+
+        // Allocate device memory for output frames array
+        err = cudaMalloc((void **)&d_output_data, output_data_size);
 
         if (err != cudaSuccess)
         {
-            fprintf(stderr, "Failed to copy vector A from host to device (error code %s)!\n", cudaGetErrorString(err));
+            fprintf(stderr, "Failed to allocate device output vector (error code %s)!\n", cudaGetErrorString(err));
             exit(EXIT_FAILURE);
         }
 
-        // Allocate the output data on the device
-        err = cudaMalloc((void **)&d_Output, sizeOutput);
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to allocate device vector B (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
-
-        // Process frame 
+        // Data is assigned and memory allocated, now process pixels in parallel
         process<<<num_blocks, num_threads_per_block>>>(
-            d_Input, d_Output, frameCount,
+            d_input_data, d_output_data, 
+            pixels_per_thread, frames_to_process,
             input_width, input_height,
-            output_width, output_height
-        );
+            output_width, output_height);
 
         err = cudaGetLastError();
 
@@ -145,17 +188,35 @@ void process_video( cv::Mat frames[],int frameCount){
             exit(EXIT_FAILURE);
         }
 
-        // Copy the device result vector in device memory to the host result vector
-        err = cudaMemcpy(h_Output, d_Output, sizeOutput, cudaMemcpyDeviceToHost);
+        // Copy frame data from host memory to output frames array
 
-        if (err != cudaSuccess)
+        for (int j = 0; j < frames_to_process; j++)
         {
-            fprintf(stderr, "Failed to copy vector C from device to host (error code %s)!\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
+            int frame_index = i * FRAMES_BATCH_SIZE + j;
+
+            cv::Mat output_frame(output_height, output_width, CV_8UC3);
+
+            // Copy input frame to host memory
+            err = cudaMemcpy(
+                output_frame.data,
+                d_output_data + j * output_pixels_per_frame * 3,
+                output_pixels_per_frame * 3 * sizeof(unsigned char),
+                cudaMemcpyDeviceToHost);
+
+            if (err != cudaSuccess)
+            {
+                fprintf(
+                    stderr,
+                    "Failed to assign output vector frames data at frame index %d (error code %s)!\n",
+                    frame_index, cudaGetErrorString(err));
+                exit(EXIT_FAILURE);
+            }
+
+            output_frames[frame_index] = output_frame;
         }
 
         // Free device global memory
-        err = cudaFree(d_Input);
+        err = cudaFree(d_input_data);
 
         if (err != cudaSuccess)
         {
@@ -163,33 +224,19 @@ void process_video( cv::Mat frames[],int frameCount){
             exit(EXIT_FAILURE);
         }
 
-        err = cudaFree(d_Output);
+        err = cudaFree(d_output_data);
 
         if (err != cudaSuccess)
         {
             fprintf(stderr, "Failed to free device vector B (error code %s)!\n", cudaGetErrorString(err));
             exit(EXIT_FAILURE);
         }
-
-        // Free host memory
-        free(h_Output);
-
-        cv::Mat output_frame(output_height, output_width, CV_8UC3, h_Output);
-
-        output[i] = output_frame;
-
-        // Reset the device and exit
-        err = cudaDeviceReset();
-
-        if (err != cudaSuccess)
-        {
-            fprintf(stderr, "Failed to deinitialize the device! error=%s\n", cudaGetErrorString(err));
-            exit(EXIT_FAILURE);
-        }
     }
 
-    frames = output;
+    return output_frames;
 }
+
+using namespace std;
 
 int main(int argc, char *argv[])
 {
@@ -199,14 +246,14 @@ int main(int argc, char *argv[])
         filename = argv[1];
         output_filename = argv[2];
         num_threads_per_block = atoi(argv[3]);
-        num_blocks=atoi(argv[4]);
+        num_blocks = atoi(argv[4]);
     }
     else
     {
         filename = (char *)DEFAULT_FILENAME;
         output_filename = (char *)DEFAULT_OUTPUT_FILENAME;
         num_threads_per_block = NUM_THREADS_PER_BLOCK;
-        num_blocks=NUM_BLOCKS;
+        num_blocks = NUM_BLOCKS;
     }
     if (argc >= 7)
     {
@@ -261,29 +308,28 @@ int main(int argc, char *argv[])
 
     capture.release();
 
+    cout << "Processing video..." << endl;
     auto start = chrono::high_resolution_clock::now();
 
-    cout << "Processing video..." << endl;
-
-    process_video(frames, frame_count);
-
-    cout << "Done" << endl;
+    cv::Mat *outputs = process_video(frames, frame_count);
 
     auto end = chrono::high_resolution_clock::now();
     auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
-    cout << "Blocks: " << num_blocks << "Threads: " << num_threads_per_block << " Execution Time: " << duration.count() << endl;
+    cout << "Blocks: " << num_blocks << " Threads: " << num_threads_per_block << " Execution Time: " << duration.count() << endl;
 
     // Joining all frames into a single video
 
     cout << "Writing video..." << endl;
     for (int frame_number = 0; frame_number < frame_count; frame_number++)
     {
-        writter << frames[frame_number];
+        writter << outputs[frame_number];
     }
-    cout << "Done" << endl;
 
     writter.release();
 
     printf("Done\n");
+
+    // Freeing memory
+    delete[] outputs;
     return 0;
 }

@@ -56,7 +56,7 @@
 
 
 
-
+Blocks: 1 Threads: 1 Execution Time: 60868905405
 
 Video metadata: (10)
   - Frame width: 1920
