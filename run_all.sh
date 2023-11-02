@@ -17,9 +17,9 @@ nvcc mainCuda.cu -o main_cuda $(pkg-config --cflags --libs opencv4)
 # Run code for multiple cases of different BlockSizes and GridSizes
 ./main_cuda $1 $2 1 1 >> $4
 
-for i in 10 20 30 40
+for i in 40 50 60 70
 do
-    for j in 4 8 16 32 64
+    for j in 128 256 512 1024
     do
         echo "Running for BlockSize: $j, GridSize: $i"
         ./main_cuda $1 $2 $j $i >> $4

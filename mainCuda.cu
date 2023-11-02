@@ -1,4 +1,4 @@
-%%writefile mainCuda3.cu
+%%writefile mainCuda.cu
 
 #include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
@@ -24,7 +24,7 @@
 #define BICUBIC_INTERPOLATION 2
 
 // Number of frames to be passed to GPU on step
-#define FRAMES_BATCH_SIZE 100
+#define FRAMES_BATCH_SIZE 300
 
 char *filename;
 char *output_filename;
@@ -175,7 +175,7 @@ cv::Mat *process_video(cv::Mat frames[], int frameCount)
 
         // Data is assigned and memory allocated, now process pixels in parallel
         process<<<num_blocks, num_threads_per_block>>>(
-            d_input_data, d_output_data, 
+            d_input_data, d_output_data,
             pixels_per_thread, frames_to_process,
             input_width, input_height,
             output_width, output_height);
@@ -240,6 +240,7 @@ using namespace std;
 
 int main(int argc, char *argv[])
 {
+    auto start = chrono::high_resolution_clock::now();
     // Get params size
     if (argc >= 5)
     {
@@ -300,24 +301,34 @@ int main(int argc, char *argv[])
     // We'll write output video frame by frame in parallel
     cv::Mat frames[frame_count];
 
+    auto read_start = chrono::high_resolution_clock::now();
     cout << "Reading video frames..." << endl;
     for (int frame_number = 0; frame_number < frame_count; frame_number++)
     {
         capture >> frames[frame_number];
     }
 
+    auto read_end = chrono::high_resolution_clock::now();
+    auto read_duration = chrono::duration_cast<chrono::nanoseconds>(read_end - read_start);
+
+    cout << "Read time: " << read_duration.count() << endl;
+
     capture.release();
 
     cout << "Processing video..." << endl;
-    auto start = chrono::high_resolution_clock::now();
 
+    auto process_start = chrono::high_resolution_clock::now();
     cv::Mat *outputs = process_video(frames, frame_count);
 
-    auto end = chrono::high_resolution_clock::now();
-    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
-    cout << "Blocks: " << num_blocks << " Threads: " << num_threads_per_block << " Execution Time: " << duration.count() << endl;
+    auto process_end = chrono::high_resolution_clock::now();
+    auto process_duration = chrono::duration_cast<chrono::nanoseconds>(process_end - process_start);
+
+    cout << "Processing time: " << process_duration.count() << endl;
 
     // Joining all frames into a single video
+
+    auto write_start = chrono::high_resolution_clock::now();
+    cout << "Reading video frames..." << endl;
 
     cout << "Writing video..." << endl;
     for (int frame_number = 0; frame_number < frame_count; frame_number++)
@@ -325,11 +336,21 @@ int main(int argc, char *argv[])
         writter << outputs[frame_number];
     }
 
+    auto write_end = chrono::high_resolution_clock::now();
+    auto write_duration = chrono::duration_cast<chrono::nanoseconds>(write_end - write_start);
+
+    cout << "Write time: " << write_duration.count() << endl;
+
     writter.release();
 
     printf("Done\n");
 
     // Freeing memory
     delete[] outputs;
+
+    auto end = chrono::high_resolution_clock::now();
+    auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
+
+    cout << "Blocks: " << num_blocks << "Threads: " << num_threads_per_block << " Execution Time: " << duration.count() << endl;
     return 0;
 }

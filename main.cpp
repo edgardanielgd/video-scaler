@@ -160,7 +160,10 @@ int main(int argc, char *argv[])
     auto start = chrono::high_resolution_clock::now();
 
 #pragma omp parallel for
-    for (int frame_number = 0; frame_number < frame_count; frame_number++)
+    for (
+        int frame_number = 0;
+        frame_number < frame_count;
+        frame_number++)
     {
         cv::Mat frame = frames[frame_number];
 
