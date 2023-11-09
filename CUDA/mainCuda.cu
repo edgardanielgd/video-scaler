@@ -1,4 +1,5 @@
-%%writefile mainCuda.cu
+// The following line is for Colab only
+// %%writefile mainCuda.cu
 
 #include "opencv2/video.hpp"
 #include "opencv2/highgui.hpp"
@@ -154,7 +155,7 @@ cv::Mat *process_video(cv::Mat frames[], int frameCount)
                 stderr,
                 "Failed to assign input vector frames data at frame index %d (error code %s)!\n",
                 frame_index, cudaGetErrorString(err));
-
+            
             exit(EXIT_FAILURE);
         }
     }
@@ -297,8 +298,8 @@ int main(int argc, char *argv[])
 
     // Copying video frame by frame into video writter
     cv::VideoWriter writter(
-        output_filename,
-        cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
+        output_filename, 
+        cv::VideoWriter::fourcc('M', 'J', 'P', 'G'), 
         fps, cv::Size(output_width, output_height)
     );
 
@@ -329,7 +330,7 @@ int main(int argc, char *argv[])
             {
                 frame = frames[dummy_frame_number - 1].clone();
             }
-
+            
             frames[dummy_frame_number] = frame;
         }
 
