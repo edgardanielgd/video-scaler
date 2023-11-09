@@ -1,8 +1,8 @@
-*.mkv
-*.exe
-*.mp4
-*.avi
-*.txt
+**.mkv
+**.exe
+**.mp4
+**.avi
+**.txt
 opencv-4.x
 opencv.zip
 build
