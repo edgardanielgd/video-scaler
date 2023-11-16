@@ -151,9 +151,9 @@ int main(int argc, char **argv)
     else
     {
         // Read metadata from root process
-        MPI_Bcast(&input_width, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&input_height, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&frame_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        MPI_Recv(&input_width, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&input_height, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        MPI_Recv(&frame_count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
 
         // While there are still frames to process
         while (MPI_Probe(0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE))
