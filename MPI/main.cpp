@@ -97,29 +97,46 @@ int main(int argc, char **argv)
         assert(input_width >= OUTPUT_WIDTH && input_height >= OUTPUT_HEIGHT);
 
         // Send metadata to all procsses first
-        MPI_Bcast(&input_width, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&input_height, 1, MPI_INT, 0, MPI_COMM_WORLD);
-        MPI_Bcast(&frame_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        int res = MPI_Bcast(&input_width, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        if (res != MPI_SUCCESS)
+        {
+            cout << "Error when broadcasting metadata" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
 
+        res = MPI_Bcast(&input_height, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        if (res != MPI_SUCCESS)
+        {
+            cout << "Error when broadcasting metadata" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        res = MPI_Bcast(&frame_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        if (res != MPI_SUCCESS)
+        {
+            cout << "Error when broadcasting metadata" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        // Start reading video frames
         cv::Mat frame;
         for (int frame_index = 0; frame_index < frame_count; ++frame_index)
         {
             capture.read(frame);
 
-            int target_rank = frame_index % world_size;
+            int target_rank = frame_index % (world_size - 1) + 1;
 
             // Distribute frames to other ranks
-            for (int dest_rank = 1; dest_rank < world_size; ++dest_rank)
-            {
-                MPI_Send(
-                    frame.data,
-                    input_width * input_height * 3,
-                    MPI_BYTE,
-                    target_rank,
-                    0,
-                    MPI_COMM_WORLD);
-            }
+            MPI_Send(
+                frame.data,
+                input_width * input_height * 3,
+                MPI_INT,
+                target_rank,
+                0,
+                MPI_COMM_WORLD);
         }
+
+        cout << "Finished sending frames" << endl;
 
         capture.release();
 
@@ -152,13 +169,47 @@ int main(int argc, char **argv)
     else
     {
         // Read metadata from root process
-        MPI_Recv(&input_width, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&input_height, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
-        MPI_Recv(&frame_count, 1, MPI_INT, 0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE);
+        cout << "Waiting for metadata" << endl;
+
+        // Get metadata from root process
+        int res = MPI_Bcast(&input_width, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        if (res != MPI_SUCCESS)
+        {
+            cout << "Error when broadcasting metadata" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        res = MPI_Bcast(&input_height, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        if (res != MPI_SUCCESS)
+        {
+            cout << "Error when broadcasting metadata" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        res = MPI_Bcast(&frame_count, 1, MPI_INT, 0, MPI_COMM_WORLD);
+        if (res != MPI_SUCCESS)
+        {
+            cout << "Error when broadcasting metadata" << endl;
+            MPI_Abort(MPI_COMM_WORLD, 1);
+        }
+
+        cout << "Gotten metadata: "
+             << "input_width = " << input_width << ", "
+             << "input_height = " << input_height << ", "
+             << "frame_count = " << frame_count << endl;
 
         // While there are still frames to process
         while (MPI_Probe(0, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE))
         {
+            int test_data[input_width * input_height * 3];
+            MPI_Recv(
+                test_data,
+                input_width * input_height * 3,
+                MPI_INT,
+                0,
+                0,
+                MPI_COMM_WORLD,
+                MPI_STATUS_IGNORE);
             // Receive frame from root process
             char *frame = (char *)malloc(input_width * input_height * 3 * sizeof(char));
             MPI_Recv(

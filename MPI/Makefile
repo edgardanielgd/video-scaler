@@ -50,8 +50,17 @@ install-opencv-4:
 	vim /etc/ld.so.conf.d/opencv.conf
 	sudo ldconfig -v
 
+install-ffmpeg:
+	sudo apt-get install ffmpeg
+
 compile-mpi:
-	mpic++ -o main main.cpp $(OPENCV)
+	mpic++ -o ./build/main main.cpp $(OPENCV)
+
+compile-mpi2:
+	mpic++ -o ./build/main2 main2.cpp $(OPENCV) 
 
 run-mpi:
-	mpirun -np 2 --allow-run-as-root ./main 
+	mpirun -np 2 --allow-run-as-root --hostfile ./mpi_hosts ./build/main 
+
+run-mpi2:
+	mpirun -np 2 --allow-run-as-root --hostfile ./mpi_hosts ./build/main2 

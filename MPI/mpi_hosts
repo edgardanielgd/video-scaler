@@ -1,1 +1,2 @@
 # Hostfile for MPI
+localhost slots=2
