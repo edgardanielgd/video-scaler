@@ -13,16 +13,15 @@
 
 using namespace std;
 
-char *process_frame(char *frame, int input_width, int input_height, int output_width, int output_height)
+char *process_frame(char *frame, int input_width, int input_height)
 {
-    for (int i = 0; i < output_height; i++)
+    char *output_frame = (char *)malloc(OUTPUT_WIDTH * OUTPUT_HEIGHT * 3 * sizeof(char));
+    for (int i = 0; i < OUTPUT_HEIGHT; i++)
     {
-        for (int j = 0; j < output_width; j++)
+        for (int j = 0; j < OUTPUT_WIDTH; j++)
         {
-            int x = (int)(i * (input_height / output_height));
-            int y = (int)(j * (input_width / output_width));
-
-            char *output_frame = (char *)malloc(output_width * output_height * 3 * sizeof(char));
+            int x = (int)(i * (input_height / OUTPUT_HEIGHT));
+            int y = (int)(j * (input_width / OUTPUT_WIDTH));
 
             // Average 2x2 neighbors values
             int r = 0, g = 0, b = 0;
@@ -40,17 +39,19 @@ char *process_frame(char *frame, int input_width, int input_height, int output_w
                 }
             }
 
-            char *output_pixel = output_frame + i * output_width * 3 + j * 3;
+            char *output_pixel = output_frame + i * OUTPUT_WIDTH * 3 + j * 3;
             output_pixel[0] = (char)(r / count);
             output_pixel[1] = (char)(g / count);
             output_pixel[2] = (char)(b / count);
         }
     }
+
+    return output_frame;
 }
 
 int main(int argc, char **argv)
 {
-    MPI_Init(argc, argv);
+    MPI_Init(&argc, &argv);
 
     int world_size;
     MPI_Comm_size(MPI_COMM_WORLD, &world_size);
@@ -93,7 +94,7 @@ int main(int argc, char **argv)
         cout << "Input file: " << DEFAULT_FILENAME << endl;
         cout << "Output file: " << DEFAULT_OUTPUT_FILENAME << endl;
 
-        assert(input_width >= output_width && input_height >= output_height);
+        assert(input_width >= OUTPUT_WIDTH && input_height >= OUTPUT_HEIGHT);
 
         // Send metadata to all procsses first
         MPI_Bcast(&input_width, 1, MPI_INT, 0, MPI_COMM_WORLD);
@@ -103,12 +104,12 @@ int main(int argc, char **argv)
         cv::Mat frame;
         for (int frame_index = 0; frame_index < frame_count; ++frame_index)
         {
-            video.read(frame);
+            capture.read(frame);
 
             int target_rank = frame_index % world_size;
 
             // Distribute frames to other ranks
-            for (int dest_rank = 1; dest_rank < size; ++dest_rank)
+            for (int dest_rank = 1; dest_rank < world_size; ++dest_rank)
             {
                 MPI_Send(
                     frame.data,
@@ -123,9 +124,9 @@ int main(int argc, char **argv)
         capture.release();
 
         cv::VideoWriter writter(
-            output_filename,
+            DEFAULT_OUTPUT_FILENAME,
             cv::VideoWriter::fourcc('M', 'J', 'P', 'G'),
-            fps, cv::Size(output_width, output_height));
+            fps, cv::Size(OUTPUT_WIDTH, OUTPUT_HEIGHT));
 
         // Wait for incoming messages
         while (MPI_Probe(MPI_ANY_SOURCE, 0, MPI_COMM_WORLD, MPI_STATUS_IGNORE))
@@ -170,7 +171,7 @@ int main(int argc, char **argv)
                 MPI_STATUS_IGNORE);
 
             // Process frame
-            char *output_frame = process_frame(frame, input_width, input_height, OUTPUT_WIDTH, OUTPUT_HEIGHT);
+            char *output_frame = process_frame(frame, input_width, input_height);
 
             // Send processed frame back to root process
             MPI_Send(
