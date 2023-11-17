@@ -5,10 +5,11 @@
 #include "opencv2/imgproc.hpp"
 #include "opencv2/core/utility.hpp"
 #include <iostream>
+#include <chrono>
 
 #define DEFAULT_FILENAME "video1.mp4"
 #define DEFAULT_OUTPUT_FILENAME "output"
-#define OUTPUT_WIDTH 480
+#define OUTPUT_WIDTH 640
 #define OUTPUT_HEIGHT 360
 #define THREADS_PER_PROCESS 4
 
@@ -57,6 +58,8 @@ int main(int argc, char **argv)
     int world_rank;
     MPI_Comm_rank(MPI_COMM_WORLD, &world_rank);
 
+    auto start = chrono::high_resolution_clock::now();
+
     cv::VideoCapture capture(DEFAULT_FILENAME);
 
     if (!capture.isOpened())
@@ -90,7 +93,7 @@ int main(int argc, char **argv)
     cout << "Starts capturing frames at " << frames_offset << " (" << frames_to_process << ")" << endl;
 
     // Process frames in parallel with OpenMP
-    omp_set_num_threads(THREADS_PER_PROCESS);
+    // omp_set_num_threads(THREADS_PER_PROCESS);
     // #pragma omp parallel for
     for (
         int frame_number = 0;
@@ -149,6 +152,11 @@ int main(int argc, char **argv)
         cout << command << endl;
 
         system(command.c_str());
+
+        auto end = chrono::high_resolution_clock::now();
+        auto duration = chrono::duration_cast<chrono::nanoseconds>(end - start);
+
+        cout << "Total time: " << duration.count() << " nanoseconds" << endl;
     }
 
     MPI_Finalize();
