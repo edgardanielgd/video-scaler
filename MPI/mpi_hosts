@@ -1,2 +1,9 @@
 # Hostfile for MPI
-localhost slots=2
+ip-172-31-22-65.ec2.internal
+ip-172-31-27-144.ec2.internal
+ip-172-31-29-116.ec2.internal
+ip-172-31-16-156.ec2.internal
+ip-172-31-24-111.ec2.internal
+ip-172-31-21-209.ec2.internal
+ip-172-31-22-155.ec2.internal
+ip-172-31-22-74.ec2.internal
