@@ -3,64 +3,37 @@ OPENCV = -I/usr/local/include/opencv4 -L/usr/local/bin -lopencv_highgui -lopencv
 # Execute from WSL
 install-mpi:
 	apt-get update
-	adduser mpiuser --uid 99
-	apt-get install openmpi-bin openmpi-common libopenmpi-dev
-	apt-get install nfs-kernel-server
-	apt-get install nfs-common
-	echo "/home/mpiuse *(rw,sync,no_subtree_check)" > /etc/exports
-	service nfs-kernel-server restart
-	exportfs -a
-
-install-opencv-3:
-	sudo apt-get install build-essential
-	sudo apt-get install cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev
-	git clone https://github.com/opencv/opencv.git
-	git clone https://github.com/opencv/opencv_contrib.git
-	cd opencv
-	mkdir build
-	cd build
-	cmake -D CMAKE_BUILD_TYPE=RELEASE \
-      -D CMAKE_INSTALL_PREFIX=/usr/local \
-      -D OPENCV_ENABLE_NONFREE=ON \
-      -D BUILD_PERF_TESTS=OFF \
-      -D BUILD_TESTS=OFF \
-      -D BUILD_DOCS=ON \
-      -D BUILD_EXAMPLES=ON \
-      -D ENABLE_PRECOMPILED_HEADERS=OFF \
-      -D WITH_TBB=ON \
-      -D WITH_OPENMP=ON \
-      -D OPENCV_GENERATE_PKGCONFIG=YES \
-      -D OPENCV_EXTRA_EXE_LINKER_FLAGS=-latomic \
-      -D PYTHON3_EXECUTABLE=$(which python3) \
-      -D PYTHON_EXECUTABLE=$(which python2) \
-      ..
-	make -j4
-	sudo make install
-	export PKG_CONFIG_PATH=$(pwd)/unix-install/
+	sudo apt-get install openmpi-bin openmpi-common libopenmpi-dev
 
 install-opencv-4:
-	sudo apt update && sudo apt install -y cmake g++ wget unzip
+	sudo apt-get install build-essential
+	sudo apt-get install pkg-config cmake git libgtk2.0-dev pkg-config libavcodec-dev libavformat-dev libswscale-dev ffmpeg
 	wget -O opencv.zip https://github.com/opencv/opencv/archive/4.x.zip
 	unzip opencv.zip
+	cd opencv-4.x
 	mkdir -p build && cd build
 	cmake  ../opencv-4.x
 	cmake --build .
 	sudo make install
-	touch /etc/ld.so.conf.d/opencv.conf
-	vim /etc/ld.so.conf.d/opencv.conf
+	sudo touch /etc/ld.so.conf.d/opencv.conf
+	sudo vim /etc/ld.so.conf.d/opencv.conf
 	sudo ldconfig -v
 
-install-ffmpeg:
-	sudo apt-get install ffmpeg
+fix-ldconfig:
+	sudo touch /etc/ld.so.conf.d/opencv.conf
+	sudo vim /etc/ld.so.conf.d/opencv.conf
+	# Add /usr/local/lib to the file
+	sudo ldconfig -v
+
+configure-ssh:
+	cat ssh.config >> ~/.ssh/config
 
 compile-mpi:
-	mpic++ -o ./build/main main.cpp $(OPENCV)
-
-compile-mpi2:
-	mpic++ -o ./build/main2 main2.cpp $(OPENCV) 
+	mpic++ -o /main main.cpp $(OPENCV)
 
 run-mpi:
-	mpirun -np 2 --allow-run-as-root --hostfile ./mpi_hosts ./build/main 
+	mpirun -np 2 --allow-run-as-root --hostfile ./mpi_hosts main 
 
-run-mpi2:
-	mpirun -np 2 --allow-run-as-root --hostfile ./mpi_hosts ./build/main2 
+add-ssh-key:
+	ssh-agent bash
+	ssh-add SSHHosts.pem
